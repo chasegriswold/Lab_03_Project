@@ -79,8 +79,43 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+	
+	
+	//RED is 6, BLUE is 7, ORANGE is 8, GREEN is 9
 
-  /* USER CODE END SysInit */
+__HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
+	// Set up a configuration struct to pass to the initialization function
+	GPIO_InitTypeDef initStr = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, 
+	GPIO_MODE_OUTPUT_PP,
+	GPIO_SPEED_FREQ_LOW,
+	GPIO_NOPULL};
+	HAL_GPIO_Init(GPIOC, &initStr); // Initialize pins PC8 & PC9
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); // Start PC8 high
+	
+
+//		RCC->APB1ENR |= (1<<0) | (1<<1); /* Enable Timer 2 and Timer 3 */
+		RCC->APB1ENR |= RCC_APB1ENR_TIM2EN | RCC_APB1ENR_TIM3EN; /* Enable Timer 2 and Timer 3 */
+		
+		TIM2->PSC = 7999;
+		TIM3->PSC = 79;
+		TIM2->ARR = 250;
+		TIM3->ARR = 125;
+		
+		TIM2->DIER |= (1<<0);
+		TIM3->DIER |= (1<<0);
+	
+	/*PWM Section*/
+		TIM3->CCMR1 &= ~(1<<0) | ~(1<<1);
+		
+		/*Enable the Timers after applying timer settings */
+		TIM2->CR1 |= (1<<0);
+	
+	//Enable in NVIC
+	NVIC_EnableIRQ(TIM2_IRQn);
+	NVIC_SetPriority(TIM2_IRQn, 1); // Change the priority to 1 to starve Systick, to 3 to allow Systick
+	
+	
+	/* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
@@ -134,7 +169,25 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void TIM2_IRQHandler(void)
+{
+	GPIOC->ODR ^= (1<<8);
+	GPIOC->ODR ^= (1<<9);
+	TIM2->SR &= ~1;
+//	volatile int count = 0;
+//	
+//	GPIOC->ODR ^= (1<<8);
+//	GPIOC->ODR ^= (1<<9);
+//	
+//	while(count < 1500000)
+//		count++;
+//	
+//	GPIOC->ODR ^= (1<<8);
+//	GPIOC->ODR ^= (1<<9);
+//	//EXTI->PR |= (1<<0);
+	
+	EXTI->PR = EXTI_PR_PR0; /* clear exti line 0 flag */
+}
 /* USER CODE END 4 */
 
 /**
