@@ -105,7 +105,28 @@ __HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
 		TIM3->DIER |= (1<<0);
 	
 	/*PWM Section*/
-		TIM3->CCMR1 &= ~(1<<0) | ~(1<<1);
+		TIM3->CCMR1 &= ~(1<<0) | ~(1<<1); // CCS1 Output Mode
+		TIM3->CCMR1	&= ~(1<<8) | ~(1<<9); // CCS2 Output Mode
+	
+		//TIM3->CCMR1 |= (1<<4) | (1<<5) | (1<<6); // ; set output channel 1 to PWM Mode 2
+		TIM3->CCMR1 |= 0x70; //set output channel 1 to PWM Mode 2
+		
+//		TIM3->CCMR1 |= (0x7000);
+//		TIM3->CCMR1 &= ~(1<<12); //This and above line: set channel 2 to PWM Mode 1.
+		TIM3->CCMR1 |= (0x7000 & 0xEFFF); //set channel 2 to PWM Mode 1.
+		
+		TIM3->CCMR1 |= 0x808; //sets bits 3 and 11 high.  Enable the output compare preload for both channels
+		
+		TIM3->CCER |= 0x11; //sets bits 0 and 4 high.  Set the output enable bits for channels 1 & 2
+		
+		//Setting channel 1 and 2 to 20% of the ARR ------- ARR for TIM3 = 125 so 20% = 25
+		TIM3->CCR1 |= 0x19;
+		TIM3->CCR2 |= 0x19;
+		//-----
+		
+		
+		
+		
 		
 		/*Enable the Timers after applying timer settings */
 		TIM2->CR1 |= (1<<0);
@@ -113,6 +134,7 @@ __HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
 	//Enable in NVIC
 	NVIC_EnableIRQ(TIM2_IRQn);
 	NVIC_SetPriority(TIM2_IRQn, 1); // Change the priority to 1 to starve Systick, to 3 to allow Systick
+	
 	
 	
 	/* USER CODE END SysInit */
@@ -173,20 +195,8 @@ void TIM2_IRQHandler(void)
 {
 	GPIOC->ODR ^= (1<<8);
 	GPIOC->ODR ^= (1<<9);
-	TIM2->SR &= ~1;
-//	volatile int count = 0;
-//	
-//	GPIOC->ODR ^= (1<<8);
-//	GPIOC->ODR ^= (1<<9);
-//	
-//	while(count < 1500000)
-//		count++;
-//	
-//	GPIOC->ODR ^= (1<<8);
-//	GPIOC->ODR ^= (1<<9);
-//	//EXTI->PR |= (1<<0);
+	TIM2->SR &= ~(1<<0); /* Bit 0 UIF: Update interrupt flag --- this clears the flag in the TIM2 Status Register */
 	
-	EXTI->PR = EXTI_PR_PR0; /* clear exti line 0 flag */
 }
 /* USER CODE END 4 */
 
