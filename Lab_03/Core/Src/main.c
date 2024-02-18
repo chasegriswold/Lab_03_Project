@@ -83,59 +83,76 @@ int main(void)
 	
 	//RED is 6, BLUE is 7, ORANGE is 8, GREEN is 9
 
-__HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
-	// Set up a configuration struct to pass to the initialization function
-	GPIO_InitTypeDef initStr = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, 
-	GPIO_MODE_OUTPUT_PP,
-	GPIO_SPEED_FREQ_LOW,
-	GPIO_NOPULL};
-	HAL_GPIO_Init(GPIOC, &initStr); // Initialize pins PC8 & PC9
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); // Start PC8 high
-	
+//  /*Uses the HAL library to do the LEDS
+//__HAL_RCC_GPIOC_CLK_ENABLE(); // Enable the GPIOC clock in the RCC
+//	// Set up a configuration struct to pass to the initialization function
+//	GPIO_InitTypeDef initStr = {GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, 
+//	GPIO_MODE_OUTPUT_PP,
+//	GPIO_SPEED_FREQ_LOW,
+//	GPIO_NOPULL};
+//	HAL_GPIO_Init(GPIOC, &initStr); // Initialize pins PC8 & PC9
+//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); // Start PC8 high */
 
+    RCC->AHBENR |=  RCC_AHBENR_GPIOCEN_Msk;
+
+    //GREEN/ORANGE
+    GPIOC->MODER |= (1 << 16);
+    GPIOC->MODER |= (1 << 18);
+    GPIOC->OTYPER &= ~(1 << 8);
+    GPIOC->OTYPER &= ~(1 << 9);
+    GPIOC->OSPEEDR &= ~(1 << 16); 
+    GPIOC->OSPEEDR &= ~(1 << 18);
+    GPIOC->PUPDR &= ~(0x00000000); //Set pull down
+    GPIOC->ODR &= ~(1 << 8); //Low
+    GPIOC->ODR |= (1 << 9); //Green Starts HIGH
+	
 //		RCC->APB1ENR |= (1<<0) | (1<<1); /* Enable Timer 2 and Timer 3 */
 		RCC->APB1ENR |= RCC_APB1ENR_TIM2EN | RCC_APB1ENR_TIM3EN; /* Enable Timer 2 and Timer 3 */
 		
+		//Set peroid for TIM2
 		TIM2->PSC = 7999;
-		TIM3->PSC = 79;
 		TIM2->ARR = 250;
-		TIM3->ARR = 125;
 		
 		TIM2->DIER |= (1<<0);
+		/*Enable the Timer after applying timer settings */
+		TIM2->CR1 |= (1<<0);
+		
+		//Set Period for TIM3
+		//Note that 8MHz is fast enough for getting 800 Hz that we can just set ARR to 10000
+		TIM3->ARR = 10000;
 		TIM3->DIER |= (1<<0);
-	
-	/*PWM Section*/
+	 
+		/*PWM Section*/
 		TIM3->CCMR1 &= ~(1<<0) | ~(1<<1); // CCS1 Output Mode
 		TIM3->CCMR1	&= ~(1<<8) | ~(1<<9); // CCS2 Output Mode
 	
-		//TIM3->CCMR1 |= (1<<4) | (1<<5) | (1<<6); // ; set output channel 1 to PWM Mode 2
 		TIM3->CCMR1 |= 0x70; //set output channel 1 to PWM Mode 2
-		
-//		TIM3->CCMR1 |= (0x7000);
-//		TIM3->CCMR1 &= ~(1<<12); //This and above line: set channel 2 to PWM Mode 1.
 		TIM3->CCMR1 |= (0x7000 & 0xEFFF); //set channel 2 to PWM Mode 1.
-		
 		TIM3->CCMR1 |= 0x808; //sets bits 3 and 11 high.  Enable the output compare preload for both channels
-		
 		TIM3->CCER |= 0x11; //sets bits 0 and 4 high.  Set the output enable bits for channels 1 & 2
-		
-		//Setting channel 1 and 2 to 20% of the ARR ------- ARR for TIM3 = 125 so 20% = 25
-		TIM3->CCR1 |= 0x19;
-		TIM3->CCR2 |= 0x19;
+	
+		//Setting channel 1 and 2 to 20% of the ARR for TIM3
+		TIM3->CCR1 = 2000;
+		TIM3->CCR2 = 2000;
 		//-----
-		
-		
-		
-		
-		
-		/*Enable the Timers after applying timer settings */
-		TIM2->CR1 |= (1<<0);
+		TIM3->CR1 |= 1;
+
 	
-	//Enable in NVIC
-	NVIC_EnableIRQ(TIM2_IRQn);
-	NVIC_SetPriority(TIM2_IRQn, 1); // Change the priority to 1 to starve Systick, to 3 to allow Systick
+		//Enable in TIM2 NVIC
+		NVIC_EnableIRQ(TIM2_IRQn);
+		NVIC_SetPriority(TIM2_IRQn, 1); // Change the priority to 1 to starve Systick, to 3 to allow Systick
 	
-	
+		//PC6 and PC7 alternate function mode section
+			//RED/BLUE
+		GPIOC->MODER |= (1 << 13); //Set MODER 6 (bit 16) to alternate function mode
+		GPIOC->MODER |= (1 << 15); //Set MODER 7 (bit 18) to alternate function mode
+		GPIOC->OTYPER &= ~(1 << 6); //Set to 0 for push pull
+		GPIOC->OTYPER &= ~(1 << 7);
+		GPIOC->OSPEEDR &= ~(1 << 12); //Set to 0 for low speed
+		GPIOC->OSPEEDR &= ~(1 << 14); 
+//	GPIOC->ODR &= ~(1 << 7); //Low
+//	GPIOC->ODR &= ~(1 << 6); //Low
+		GPIOC->AFR[0] = 0; //Clear --- It's automatically set to the right value.
 	
 	/* USER CODE END SysInit */
 
