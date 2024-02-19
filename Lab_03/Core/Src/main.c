@@ -152,7 +152,9 @@ int main(void)
 		GPIOC->OSPEEDR &= ~(1 << 14); 
 //	GPIOC->ODR &= ~(1 << 7); //Low
 //	GPIOC->ODR &= ~(1 << 6); //Low
-		GPIOC->AFR[0] = 0; //Clear --- It's automatically set to the right value.
+		GPIOC->AFR[0] |= 0x0 << GPIO_AFRL_AFRL0_Pos; //Set 0000 to select AF0
+		
+		
 	
 	/* USER CODE END SysInit */
 
